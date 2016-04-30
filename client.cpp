@@ -17,10 +17,6 @@ using namespace std;
 
 typedef struct addrinfo AddressInfo;
 
-// Same story with these; I dunno if I can move this into returnDesc()
-AddressInfo hints;                          // Address information of server to connect to
-AddressInfo *servinfo, *p;                  // sevinfo - linked list of possible servers
-
 
 // Handles parsing and errors
 void parse( int argcount, char *argval[], char* &host_name, char* &port_n)
@@ -56,6 +52,10 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n)
 
 void returnDesc(char* &portN, char* &hostN, int *socketDes)
 {
+    // Same story with these; I dunno if I can move this into returnDesc()
+    AddressInfo hints;                          // Address information of server to connect to
+    AddressInfo *servinfo, *p;                  // sevinfo - linked list of possible servers
+
     // Zero out the hints
     memset(&hints, 0, sizeof hints);
 
@@ -95,12 +95,13 @@ void returnDesc(char* &portN, char* &hostN, int *socketDes)
         cerr << "Failed to connect to server" << endl ;
         exit(1);
     } 
+
+    // Done with this structure
+    freeaddrinfo(servinfo);
 }
 
 void cleanConnection(int *socketDes)
 {
-    // Done with this structure
-    freeaddrinfo(servinfo);
     // Close socket
     close(*socketDes);
 }
@@ -120,10 +121,20 @@ int main ( int argc, char *argv[] )
     returnDesc(port, hostName, &sockfd);
     
     // We can now read and write from sockfd
-    cout << "Success!" << endl;
-
+    
+    /*
+    //Test if the socket is reading
+    char buffer[32];
+    int n = read(sockfd, buffer, 31);
+    if (n < 0) 
+        cout << "Error reading from socket" << endl;
+    cout << buffer << endl;
+    */
+    
     // Close the connection
     cleanConnection(&sockfd);
+
+    cout << "Success!" << endl;
 
     return 0;
 

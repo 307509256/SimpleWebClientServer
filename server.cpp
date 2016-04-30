@@ -15,14 +15,11 @@
 
 using namespace std;
 
+typedef struct addrinfo AddressInfo; 
 typedef struct sockaddr_in SocketAddress;
 
-// Socket addresses; I don't know if I can move these into initialize()
-SocketAddress serverAdd;             // Socket data structure for AF_INET - server and client
-SocketAddress clientAdd;             // Set client addresses
-
 // Handles parsing and errors
-void parse( int argcount, char *argval[], char* &host_name, int &Port, char* &host_dir )
+void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char* &host_dir )
 {
     // Display help message if the number of arguements are incorrect
     if ( argcount != 4 )
@@ -38,7 +35,8 @@ void parse( int argcount, char *argval[], char* &host_name, int &Port, char* &ho
         host_name = argval[1];
 
         // argv[2] is the port number
-        Port = atoi(argval[2]);
+        port_n = argval[2];
+        int Port = atoi(argval[2]);
         if(Port < 0 || Port > 65535)
         {
             cerr << "Error: port number is invalid" << endl;
@@ -51,39 +49,58 @@ void parse( int argcount, char *argval[], char* &host_name, int &Port, char* &ho
 }
 
 // Initialize socket, and return the file descriptor 
-void initializeSocket(int portNum, int *socketDesc, int *incFileDesc)
+void initializeSocket(char* &hostN, char* &portN, int *socketDesc, int *incFileDesc)
 {   
-    socklen_t temp;
+    // Socket addresses; I don't know if I can move these into initialize()
+    AddressInfo hints, *servInfo, *p;    // getaddrinfo structs
+    socklen_t temp;                      // Temp for sizeof(clientAdd)
+    SocketAddress clientAdd;             // One day, I will figure out why we need this
 
     // Socket Procedures:
-    // Start socket:      IPv4        TCP   Protocol
-    *socketDesc = socket(AF_INET, SOCK_STREAM, 0);
-    if(*socketDesc < 0)
+    // Zero out the hints, and set its values
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;          // Assuming IPv4
+    hints.ai_socktype = SOCK_STREAM;    //TCP socket
+
+    if ((getaddrinfo(hostN, portN, &hints, &servInfo) != 0)) 
     {
-        cerr << "Error creating the socket." << endl;
-        exit(0);
+        cerr << "Call to getaddrinfo failed; check hostname and/or port number" << endl;
+        exit(1);
     }
 
-    // Zero out server address 
-    memset(&serverAdd, 0, sizeof(serverAdd));
-
-    // Bind socket:
-    // Set address values
-    serverAdd.sin_family = AF_INET;
-    // Set server addresses to bind to any ip address as set by the network
-    serverAdd.sin_addr.s_addr = INADDR_ANY;
-    // Set server bind port number
-    serverAdd.sin_port = htons(portNum);
-    // Bind socket
-    if (bind(*socketDesc, (struct sockaddr *) &serverAdd, sizeof(serverAdd)) < 0) 
+    // Loop through getaddrinfo results, until connection has been established
+    for(p = servInfo; p != NULL; p = p->ai_next) 
     {
-        cerr << "Could not bind socket to port." << endl;
-        exit(0);
+        if ((*socketDesc = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) 
+        {
+            // cerr << "Socket could not establish file descriptor" << endl;
+            continue;
+        }
+
+        if (bind(*socketDesc, p->ai_addr, p->ai_addrlen) == -1) 
+        {
+            // cerr << "Could not connect to socket" << endl;
+            close(*socketDesc);
+            continue;
+        }
+
+        break; // if we get here, we must have connected successfully
     }
+
+    // What if we couldn't connect with any host in the servinfo list?
+    if (p == NULL) 
+    {
+        cerr << "Failed to connect to server" << endl ;
+        exit(1);
+    } 
+
+    freeaddrinfo(servInfo); // all done with this structure
 
     // Listen for incoming connections. Queue up to 3 requests     
     listen(*socketDesc, 5);
     
+    // Need to multithread after this
+
     // Set the file descriptor to 
     temp = sizeof(clientAdd);
     *incFileDesc = accept(*socketDesc, (struct sockaddr *) &clientAdd, &temp);
@@ -105,14 +122,24 @@ int main ( int argc, char *argv[] )
     // Variable declarations
     char* hostName;                             // IP or Domain that we need to connect to 
     char* hostDir;                              // Path of directory to host on the server
-    int port;                                   // Port number to open socket
+    char* port;                                 // Port number to open socket
     int socketDsc, FileDsc;                     // Socket descriptor, and file descriptor
 
     // Parse the input
     parse(argc, argv, hostName, port, hostDir);
 
     // Grab the file descriptor      (This is the one)
-    initializeSocket(port, &socketDsc, &FileDsc);
+    initializeSocket(hostName, port, &socketDsc, &FileDsc);
+
+    /*
+    //Test if the descriptor can write
+    char buffer[32];
+    strcpy(buffer, "Hello, Socket World!");
+    int n = write(FileDsc,buffer,strlen(buffer));
+    if (n < 0) 
+        cout << "Error writing to socket" << endl;
+    */
+
     // Close the connection
     closeSocketAndDescriptor(&socketDsc, &FileDsc);
 
@@ -125,5 +152,4 @@ int main ( int argc, char *argv[] )
     cout << "Port: " << port << endl;
     cout << "Hosting Directory: " << hostDir << endl;
     */
-
 }
