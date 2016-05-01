@@ -14,11 +14,17 @@
 #include <unistd.h>
 
 #include <sstream>
+#include <thread>
+#include <csignal>
 
 using namespace std;
 
 typedef struct addrinfo AddressInfo; 
 typedef struct sockaddr_in SocketAddress;
+
+// these have to be global for signal handler to use them
+int socketDsc;                              // Socket descriptor
+bool endAll = false; // ends all infinite loops
 
 // Handles parsing and errors
 void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char* &host_dir )
@@ -53,11 +59,10 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
 int receivemessage (int sockfd) {
 
   // send/receive data to/from connection
-  bool isEnd = false;
   char buf[20] = {0};
   stringstream ss;
 
-  while (!isEnd) {
+  while (!endAll) {
     memset(buf, '\0', sizeof(buf));
 
     if (recv(sockfd, buf, 20, 0) == -1) {
@@ -80,13 +85,17 @@ int receivemessage (int sockfd) {
   return 0;
 }
 
+void clientHandler (int fileDsc) {
+    receivemessage(fileDsc);
+
+    close(fileDsc); // close file descriptor
+}
+
 // Initialize socket, and return the file descriptor 
-void initializeSocket(char* &hostN, char* &portN, int *socketDesc, int *incFileDesc)
+void initializeSocket(char* &hostN, char* &portN, int *socketDesc)
 {   
     // Socket addresses; I don't know if I can move these into initialize()
     AddressInfo hints, *servInfo, *p;    // getaddrinfo structs
-    socklen_t temp;                      // Temp for sizeof(clientAdd)
-    SocketAddress clientAdd;             // One day, I will figure out why we need this
 
     // Socket Procedures:
     // Zero out the hints, and set its values
@@ -123,30 +132,51 @@ void initializeSocket(char* &hostN, char* &portN, int *socketDesc, int *incFileD
     if (p == NULL) 
     {
         cerr << "Failed to connect to server" << endl ;
+        close(*socketDesc);
         exit(1);
     } 
 
     freeaddrinfo(servInfo); // all done with this structure
+}
+
+void listenLoop (int socketDesc) {
+
+    int incFileDesc;
+    socklen_t temp;                      // Temp for sizeof(clientAdd)
+    SocketAddress clientAdd;             // One day, I will figure out why we need this
 
     // Listen for incoming connections. Queue up to 3 requests     
-    listen(*socketDesc, 5);
-    
+    listen(socketDesc, 5);
+
     // Need to multithread after this
 
-    // Set the file descriptor to 
-    temp = sizeof(clientAdd);
-    *incFileDesc = accept(*socketDesc, (struct sockaddr *) &clientAdd, &temp);
-    if (*incFileDesc < 0) 
-    {
-        cerr << "Could not accept connection" << endl;
-        exit(0);
+    // continuously accept connections, and create a new clientHandler thread for each connection
+    while (!endAll) {
+
+        // Set the file descriptor to 
+        temp = sizeof(clientAdd);
+        incFileDesc = accept(socketDesc, (struct sockaddr *) &clientAdd, &temp);
+        if (incFileDesc < 0) 
+        {
+            cerr << "Could not accept connection" << endl;
+            close(socketDesc);
+            exit(0);
+        }
+
+        thread handler = thread(clientHandler, incFileDesc);
+        handler.detach(); // run in background, destroy automatically on end
+
+        // Print if successful
+        cout << "Successfully obtained descriptor" << endl;
     }
 }
 
-void closeSocketAndDescriptor( int *socket, int *file)
-{
-    close(*file);
-    close(*socket);
+// interrupt signal handler
+void interruptHandler (int signum) {
+    cout << "INTERRUPTED!" << endl;
+    endAll = true; // end all infinite loops
+    close(socketDsc); // close socket to interrupt the socket accept() function
+    exit(0);
 }
 
 int main ( int argc, char *argv[] )
@@ -155,15 +185,20 @@ int main ( int argc, char *argv[] )
     char* hostName;                             // IP or Domain that we need to connect to 
     char* hostDir;                              // Path of directory to host on the server
     char* port;                                 // Port number to open socket
-    int socketDsc, FileDsc;                     // Socket descriptor, and file descriptor
 
     // Parse the input
     parse(argc, argv, hostName, port, hostDir);
 
     // Grab the file descriptor      (This is the one)
-    initializeSocket(hostName, port, &socketDsc, &FileDsc);
+    initializeSocket(hostName, port, &socketDsc);
 
-    receivemessage(FileDsc);
+    // register signal SIGINT and signal handler  
+    signal(SIGINT, interruptHandler); 
+
+    listenLoop(socketDsc);
+
+    // loop exited on its own, must have run into error
+    close(socketDsc);
 
     /*
     //Test if the descriptor can write
@@ -173,12 +208,6 @@ int main ( int argc, char *argv[] )
     if (n < 0) 
         cout << "Error writing to socket" << endl;
     */
-
-    // Close the connection
-    closeSocketAndDescriptor(&socketDsc, &FileDsc);
-
-    // Print if successful
-    cout << "Successfully obtained descriptor" << endl;
 
     /*
     //Check if the parsing was done correctly

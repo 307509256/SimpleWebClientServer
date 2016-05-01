@@ -5,8 +5,8 @@ CFLAGS= -g
 # --- targets
 all: client server
 client:
-	$(GPP) $(CFLAGS) client.cpp -o client    
+	$(GPP) $(CFLAGS) client.cpp -o client
 server:
-	$(GPP) $(CFLAGS) server.cpp -o server
+	$(GPP) $(CFLAGS) server.cpp -o server -pthread -std=c++11
 clean:
 	rm -f *.o client server
