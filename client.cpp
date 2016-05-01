@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <string>
 
 using namespace std;
 
@@ -154,11 +155,19 @@ void cleanConnection(int *socketDes) {
     close(*socketDes);
 }
 
-int main (int argc, char *argv[]) {
+int sendmessage (int clientSockfd, const char* msg, int len) {
+    cout << "before send" << endl;
+    if (send(clientSockfd, msg, len, MSG_NOSIGNAL) == -1) {
+      perror("send");
+      return 6;
+    }
+    cout << "after send" << endl;
+    return 0;
+}
+
+int main (int argc, char *argv[]) 
+{
     // Variable declarations
-    char* hostName;                             // IP or Domain that we need to connect to
-    char* port;                                 // Port number to connect to
-    char* hostDir;                              // Message to send to the server (HTTP GET ?)
     int sockfd;                                 // File descriptor for the socket
 
 	char** urls = new char* [argc-1];
@@ -168,15 +177,24 @@ int main (int argc, char *argv[]) {
     // Parse the input
     parse(argc, argv, urls, ports, paths);
 	cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
-	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
+	//	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
-	/*
+	string msg ("Hello world");
+	string closemsg ("close");
+
     // Initialize the connection
-    for (unsigned int i = 0; i < argc-1; i++) {
+    for (int i = 0; i < argc-1; i++) {
     	returnDesc(ports[i], urls[i], &sockfd);
+
+   		cout << "start" << endl;
+
+    	sendmessage(sockfd, msg.c_str(), msg.length());
+    	sendmessage(sockfd, closemsg.c_str(), closemsg.length());
+
    		cout << "Success!" << endl;
+
     	// Close the connection
     	cleanConnection(&sockfd);
-    }*/
+    }
     return 0;
 }
