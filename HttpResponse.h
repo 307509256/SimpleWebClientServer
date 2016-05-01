@@ -1,36 +1,50 @@
 #ifndef __HTTPRESP__
 #define __HTTPRESP__
 
-#include "Http.h"
+#include <cstring>
+#include <string>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
 
-class HttpResponse: public Http
+class HttpResponse
 {
-private:
-	std::string contentType;
-	double protocolVersion, contentLength;
+protected:
+	// Data members
+	unsigned int contentLength;
 	int statusCode;
-	std::vector<std::string> data;
+	char* status;
+	char* payload;
+	char* response;
+	char* protocolVersion;
+	
+	// Protected  helper functions
+	// Generate status message
+	void genStatus(int statusC);
+	// Parsing Helper
+	void helper(char* buffer, char* &dataToStore);
+	// Clear all pointers and buffers
+	void clear();
 
 public:
-	//Default Constructor
+	// Default Constructor
 	HttpResponse();
+	// Parameterized Constructor 
+	HttpResponse(double payloadLen, int StatCode, char* htmlPayload);
+	// Destructor
+	~HttpResponse();
 
-	//Parameterized Constructor
-	//HttpResponse(double ProtocolVersion, int StatusCode, double ContentLength, std::string contentType);
-
-	//Get Methods
-	std::string getContentType();
-	double getProtocolVersion();
-	double getContentLength();
+	// Generate the HTTP request
+	char* genReq();
+	// Parse request
+	void parseReq(char *buffer);
+	
+	// Get methods
+	unsigned int getContentLength();
 	int getStatusCode();
-	//getdata?
-
-	//Set Methods
-	void setContentType(std::string setVal);
-	void setProtocolVersion(double setVal);
-	void setContentLength(double setVal);
-	void getStatusCode(int setVal);
-	//setdata?
+	char* getStatus();
+	char* getPayload();
+	char* getProtocolVersion();
 };
 
 #endif

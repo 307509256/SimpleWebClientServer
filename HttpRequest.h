@@ -1,37 +1,40 @@
 #ifndef __HTTPREQ__
 #define __HTTPREQ__
 
-#include "Http.h"
+#include <cstring>
+#include <string>
 
-class HttpGetRequest: public Http
+class HttpGetRequest 
 {
-protected: 
-	std::string request, host,
-	std::vector<std::string> accept;
-	int timeout; 
-	bool keepAlive;
+protected:
+	// Protected datamembers
+	char* path;
+	char* host;
+	char* protocolVersion;
+	char* getReq;
+	
+	// Helper fuction
+	void helper(char* buffer, char* &dataToStore);
+	// Clear cstrings
+	void clear();
+
 public:
-	//Default Constructor
-	HttpRequest();
+	// Default Constructor
+	HttpGetRequest();
+	// Parameterized Constructor
+	HttpGetRequest(char* fpath, char* fhost);
+	// Destructor
+	~HttpGetRequest();
+	// Generate the HTTP request
+	char* genReq();
+	// Parse request
+	void parseReq(char *buffer);
 
-	//Parameterized Constructor
-	//HttpRequest(std::string RequestLink, std::string Host, double ProtocolVersion, int TimeoutVal, float ProtocolVersion, bool KeepAlive);
-
-	//Get methods
-	std::string getRequest();
-	std::string getHost();
-	float getProtocolVersion();
-	int getTimeout();
-	bool isKeepAlive();
-	//getAccept?
-
-	//Set methods
-	void setRequest(std::string setVal);
-	void setHost(std::string setVal);
-	void setProtocolVersion(float setVal);
-	void setTimeout(int setVal);
-	void setKeepAlive(bool setVal);
-	//setAccept?
+  	// Return protected variables
+	char* getPath();
+  	char* getHost();
+  	char* getProtocolVersion();
+  	// int getErrorStatus();
 };
 
 #endif

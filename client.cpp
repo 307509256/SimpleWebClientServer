@@ -4,7 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 
-// Kernel Includes1
+// Kernel Includes
 #include <sys/socket.h>
 #include <sys/types.h> 
 #include <netinet/in.h>
@@ -17,45 +17,95 @@ using namespace std;
 
 typedef struct addrinfo AddressInfo;
 
+// Same story with these; I dunno if I can move this into returnDesc()
+AddressInfo hints;                          // Address information of server to connect to
+AddressInfo *servinfo, *p;                  // servinfo - linked list of possible servers
 
 // Handles parsing and errors
-void parse( int argcount, char *argval[], char* &host_name, char* &port_n)
-{
-    int Port;
-    // Display help message if the number of arguements are incorrect
-    if ( argcount != 3 )
-    {
-        // We print argv[0] assuming it is the program name
-        cout << "Usage: " << argval[0] << " <hostname> <port>" << endl;
+void parse(int argcount, char* argval[], char* urls[], char* ports[], char* paths[]) {
+    // Display help message if the number of arguments are incorrect
+    if (argcount == 1) {
+        // argval[0] is the program name
+        cout << "Usage: " << argval[0] << " <URL> <URL> ..." << endl;
         exit(0);
     }
-    // Parse values
-    else 
-    {    
-        // argv[1] is the hostname
-        host_name = argval[1];
-        if (host_name == NULL) 
-        {
-            cerr << "Hostname is invalid" << endl;
-            exit(0);
-        }
-        // argv[2] is the port number
-        port_n = argval[2];
-        Port = atoi(argval[2]);
-        if(Port < 0 || Port > 65535)
-        {
-            cerr << "Error: port number is invalid" << endl;
-            exit(1);
-        }
-    }
+
+	// Temporary holder for each argument
+	char* arg;
+
+    // argval[1] through argval[arcount-1] are the desired URLs
+    for (int i = 1; i < argcount; i++) {
+    	// Get the i-th argument (after the program name)
+		arg = argval[i];
+		unsigned int len = strlen(arg);
+
+		// Remove http:// from start of argument
+		char temp[8];
+		unsigned int j = 0;
+		for (; j < 7; j++) {
+			temp[j] = arg[j];
+		}
+		temp[7] = '\0';
+		if (strcmp(temp, "http://\0"))
+			j = 0;
+
+		// Temporary helper variables
+		int u = 0;
+		char url[len] = "";
+		int p = 0;
+		char port[6] = "";
+		int h = 0;
+		char path[len] = "";
+
+		// Parse the host name and port number
+		for (; j < len; j++) {
+			// Find start of port number
+			if (arg[j] == ':' && arg[j+1] != '\0' && isdigit(arg[j+1])) {
+				j++;
+				// Extract port #
+				while (arg[j] != '/' && arg[j] != '\0')
+					port[p++] = arg[j++];
+				if (arg[j] == '/')
+					j--;
+			}
+			// If no port number and end of host name
+			else if (arg[j] == '/')
+				// Parse the path
+				while (arg[j] != '\0')
+					path[h++] = arg[j++];
+			// Otherwise, add element to host name
+			else
+				url[u++] = arg[j];
+		}
+
+		// Null-terminate and remove unneccesary slashes
+		if (url[u-1] == '/')
+			url[u-1] = '\0';
+		else
+			url[u] = '\0';
+		// Default value for port #
+		if (!strcmp(port, ""))
+			strcpy(port, "4000");
+		else
+			port[p] = '\0';
+		// Default value for path
+		if (!strcmp(path, ""))
+			strcpy(path, "/\0");
+		else
+			path[h] = '\0';
+
+		// Allocate space for elements
+		urls[i-1] = new char [strlen(url)];
+		paths[i-1] = new char [strlen(path)];
+		ports[i-1] = new char [6];
+		// Add parsed argument to respective arrays
+		strcpy(urls[i-1], url);
+		strcpy(ports[i-1], port);
+		strcpy(paths[i-1], path);
+	}
 }
 
-void returnDesc(char* &portN, char* &hostN, int *socketDes)
-{
-    // Same story with these; I dunno if I can move this into returnDesc()
-    AddressInfo hints;                          // Address information of server to connect to
-    AddressInfo *servinfo, *p;                  // sevinfo - linked list of possible servers
-
+void returnDesc(char* &portN, char* &hostN, int *socketDes) {
     // Zero out the hints
     memset(&hints, 0, sizeof hints);
 
@@ -95,47 +145,40 @@ void returnDesc(char* &portN, char* &hostN, int *socketDes)
         cerr << "Failed to connect to server" << endl ;
         exit(1);
     } 
-
-    // Done with this structure
-    freeaddrinfo(servinfo);
 }
 
-void cleanConnection(int *socketDes)
-{
+void cleanConnection(int *socketDes) {
+    // Done with this structure
+    freeaddrinfo(servinfo);
     // Close socket
     close(*socketDes);
 }
 
-int main ( int argc, char *argv[] )
-{
+int main (int argc, char *argv[]) {
     // Variable declarations
-    char* hostName;                             // IP or Domain that we need to connect to 
-    char* port;                                   // Port number to connect to
+    char* hostName;                             // IP or Domain that we need to connect to
+    char* port;                                 // Port number to connect to
     char* hostDir;                              // Message to send to the server (HTTP GET ?)
     int sockfd;                                 // File descriptor for the socket
 
+	char** urls = new char* [argc-1];
+	char** paths = new char* [argc-1];
+	char** ports = new char* [argc-1];
+
     // Parse the input
-    parse(argc, argv, hostName, port);
+    parse(argc, argv, urls, ports, paths);
+	cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
+	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
+	/*
     // Initialize the connection
-    returnDesc(port, hostName, &sockfd);
-    
-    // We can now read and write from sockfd
-    
-    /*
-    //Test if the socket is reading
-    char buffer[32];
-    int n = read(sockfd, buffer, 31);
-    if (n < 0) 
-        cout << "Error reading from socket" << endl;
-    cout << buffer << endl;
-    */
-    
-    // Close the connection
-    cleanConnection(&sockfd);
+    for (unsigned int i = 0; i < argc-1; i++) {
+    	returnDesc(ports[i], urls[i], &sockfd);
 
-    cout << "Success!" << endl;
+   		cout << "Success!" << endl;
 
+    	// Close the connection
+    	cleanConnection(&sockfd);
+    }*/
     return 0;
-
 }

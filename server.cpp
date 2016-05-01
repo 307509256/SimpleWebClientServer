@@ -37,7 +37,7 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
         // argv[2] is the port number
         port_n = argval[2];
         int Port = atoi(argval[2]);
-        if(Port < 0 || Port > 65535)
+        if(Port <= 0 || Port > 65535)
         {
             cerr << "Error: port number is invalid" << endl;
             exit(1);
