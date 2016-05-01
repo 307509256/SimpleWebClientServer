@@ -5,6 +5,9 @@
 # Libraries
 *.lib
 *.a
+ 
+# Zip files 
+*.tar.gz 
 
 # Shared objects (inc. Windows DLLs)
 *.dll
