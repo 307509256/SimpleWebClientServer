@@ -6,6 +6,14 @@
 *.lib
 *.a
 
+# Client-Server executables 
+client 
+server 
+ptest 
+ 
+# Zip files 
+*.tar.gz 
+
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
