@@ -66,7 +66,10 @@ int receivemessage (int sockfd) {
     }
 
     ss << buf << endl;
-    cout << buf << endl;
+
+    if (isalpha(buf[0])) { //prevent empty strings from being printed
+        cout << buf << endl;
+    }
 
     if (ss.str() == "close\n")
       break;
@@ -160,7 +163,7 @@ int main ( int argc, char *argv[] )
     // Grab the file descriptor      (This is the one)
     initializeSocket(hostName, port, &socketDsc, &FileDsc);
 
-    receivemessage(socketDsc);
+    receivemessage(FileDsc);
 
     /*
     //Test if the descriptor can write

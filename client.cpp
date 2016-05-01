@@ -157,7 +157,7 @@ void cleanConnection(int *socketDes) {
 
 int sendmessage (int clientSockfd, const char* msg, int len) {
     cout << "before send" << endl;
-    if (send(clientSockfd, msg, len, 0) == -1) {
+    if (send(clientSockfd, msg, len, MSG_NOSIGNAL) == -1) {
       perror("send");
       return 6;
     }
@@ -182,7 +182,7 @@ int main (int argc, char *argv[]) {
 //	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
 	string msg ("Hello world");
-	string closemsg ("close\n");
+	string closemsg ("close");
 
     // Initialize the connection
     for (unsigned int i = 0; i < argc-1; i++) {
@@ -192,7 +192,6 @@ int main (int argc, char *argv[]) {
 
     	sendmessage(sockfd, msg.c_str(), msg.length());
     	sendmessage(sockfd, closemsg.c_str(), closemsg.length());
-    	sleep(5000); // wait a bit before closing
 
    		cout << "Success!" << endl;
 
