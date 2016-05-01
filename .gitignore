@@ -5,11 +5,6 @@
 # Libraries
 *.lib
 *.a
-
-# Client-Server executables 
-client 
-server 
-ptest 
  
 # Zip files 
 *.tar.gz 
