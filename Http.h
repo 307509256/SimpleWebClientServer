@@ -8,14 +8,14 @@ class Http
 {
 protected:
 	//common elements
-	float protocolVersion;
+	char[8] protocolVersion;
 
 public:
 	//get
-	virtual float getProtocolVersion();
+	//virtual char* getProtocolVersion();
 
 	//set
-	virtual void setProtocolVersion(float setVal);
+	//virtual void setProtocolVersion(char* &serVal);
 };
 
 #endif

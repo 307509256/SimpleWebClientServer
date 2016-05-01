@@ -1,36 +1,36 @@
 #ifndef __HTTPRESP__
 #define __HTTPRESP__
 
-#include "Http.h"
+#include <cstring>
+#include <string>
 
-class HttpResponse: public Http
+class HttpResponse
 {
 private:
-	std::string contentType;
-	double protocolVersion, contentLength;
+	char[9] protocolVersion;
+	double contentLength;
 	int statusCode;
-	std::vector<std::string> data;
+	char *status;
+	char* payload;
+	char* resquest;
+
 
 public:
-	//Default Constructor
+	// Default Constructor
 	HttpResponse();
+	// Parameterized Constructor 
+	HttpResponse(double payloadLen, int StatCode, char* htmlPayload);
+	// Generate status message
+	void genStatus(int statusC);
+	// Generate the HTTP request
+	char* genReq();
+	// Clear all pointers and buffers
+	void clear();
+	// Parse request
+	void parseReq(char *buffer);
 
-	//Parameterized Constructor
-	//HttpResponse(double ProtocolVersion, int StatusCode, double ContentLength, std::string contentType);
-
-	//Get Methods
-	std::string getContentType();
-	double getProtocolVersion();
-	double getContentLength();
-	int getStatusCode();
-	//getdata?
-
-	//Set Methods
-	void setContentType(std::string setVal);
-	void setProtocolVersion(double setVal);
-	void setContentLength(double setVal);
-	void getStatusCode(int setVal);
-	//setdata?
+	// Get methods
+	
 };
 
 #endif
