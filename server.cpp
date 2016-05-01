@@ -13,6 +13,8 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include <sstream>
+
 using namespace std;
 
 typedef struct addrinfo AddressInfo; 
@@ -46,6 +48,33 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
         // argv[3] is the hosting directory
         host_dir = argval[3];
     }
+}
+
+int receivemessage (int sockfd) {
+
+  // send/receive data to/from connection
+  bool isEnd = false;
+  char buf[20] = {0};
+  stringstream ss;
+
+  while (!isEnd) {
+    memset(buf, '\0', sizeof(buf));
+
+    if (recv(sockfd, buf, 20, 0) == -1) {
+      perror("recv");
+      return 5;
+    }
+
+    ss << buf << endl;
+    cout << buf << endl;
+
+    if (ss.str() == "close\n")
+      break;
+
+    ss.str("");
+  }
+
+  return 0;
 }
 
 // Initialize socket, and return the file descriptor 
@@ -130,6 +159,8 @@ int main ( int argc, char *argv[] )
 
     // Grab the file descriptor      (This is the one)
     initializeSocket(hostName, port, &socketDsc, &FileDsc);
+
+    receivemessage(socketDsc);
 
     /*
     //Test if the descriptor can write
