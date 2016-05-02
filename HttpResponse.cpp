@@ -165,8 +165,9 @@ void HttpResponse::parseReq(char *buffer)
 			if (check == "\r\n\r\n")
 			{
 				//The rest is data
-				this->payload = new char [this->contentLength];
+				this->payload = new char [this->contentLength+1];
 				strncpy(this->payload, buffer+i+4, this->contentLength);
+				this->payload[this->contentLength] = 0;
 			}
 		}
 	}
