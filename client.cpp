@@ -52,11 +52,11 @@ void parse(int argcount, char* argval[], char* urls[], char* ports[], char* path
 
 		// Temporary helper variables
 		int u = 0;
-		char url[len] = "";
+		char url[len];
 		int p = 0;
 		char port[6] = "";
 		int h = 0;
-		char path[len] = "";
+		char path[len];
 
 		// Parse the host name and port number
 		for (; j < len; j++) {

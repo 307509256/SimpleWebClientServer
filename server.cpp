@@ -22,6 +22,8 @@ using namespace std;
 typedef struct addrinfo AddressInfo; 
 typedef struct sockaddr_in SocketAddress;
 
+const int BUFFER_LEN = 100;
+
 // these have to be global for signal handler to use them
 int socketDsc;                              // Socket descriptor
 bool endAll = false; // ends all infinite loops
@@ -56,37 +58,49 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
     }
 }
 
-int receivemessage (int sockfd) {
+int receivemessage (int sockfd, char* &result, int* messageLen) {
 
   // send/receive data to/from connection
-  char buf[20] = {0};
-  stringstream ss;
+  char buf[BUFFER_LEN] = {0};
+  *messageLen = 0;
 
   while (!endAll) {
     memset(buf, '\0', sizeof(buf));
 
-    if (recv(sockfd, buf, 20, 0) == -1) {
+    bool started = false;
+    int bytesRead = 0;
+    string raw = "";
+
+    if ((bytesRead = recv(sockfd, buf, BUFFER_LEN, 0)) == -1) {
       perror("recv");
-      return 5;
+      exit(0);
     }
 
-    ss << buf << endl;
-
-    if (isalpha(buf[0])) { //prevent empty strings from being printed
-        cout << buf << endl;
+    if (!started && bytesRead > 0) {
+        started = true;
     }
 
-    if (ss.str() == "close\n")
-      break;
+    if (started) {
+        raw += buf;
+        messageLen += bytesRead;
 
-    ss.str("");
+        if (bytesRead < BUFFER_LEN) {
+            // finished reading
+            result = new char[*messageLen];
+            strncpy(result, raw.c_str(), *messageLen);
+            return 0;
+        }
+    }
   }
 
   return 0;
 }
 
 void clientHandler (int fileDsc) {
-    receivemessage(fileDsc);
+    char* msg;
+    int msglen = 0;
+    receivemessage(fileDsc, msg, &msglen);
+    cout << msg << endl;
 
     close(fileDsc); // close file descriptor
 }
