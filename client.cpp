@@ -179,15 +179,16 @@ int main (int argc, char *argv[])
 	cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
 	//	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
-	string msg ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
-
+	string req ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
+	string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nHello");
     // Initialize the connection
     for (int i = 0; i < argc-1; i++) {
     	returnDesc(ports[i], urls[i], &sockfd);
 
    		cout << "start" << endl;
 
-    	sendmessage(sockfd, msg.c_str(), msg.length());
+    	sendmessage(sockfd, req.c_str(), req.length());
+    	sendmessage(sockfd, resp.c_str(), resp.length());
 
    		cout << "Success!" << endl;
 

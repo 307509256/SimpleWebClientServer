@@ -90,7 +90,6 @@ int receivemessage (int sockfd, char* &result, int* messageLen) {
             result = new char[raw.length()];
             *messageLen = raw.length();
             strncpy(result, raw.c_str(), raw.length());
-            cout << result << endl;
             return 0;
         }
     }
@@ -100,16 +99,29 @@ int receivemessage (int sockfd, char* &result, int* messageLen) {
 }
 
 void clientHandler (int fileDsc) {
-    char* msg;
-    int msglen = 0;
-    receivemessage(fileDsc, msg, &msglen);
-    cout << msg << endl;
+    char* req;
+    int reqlen = 0;
+    receivemessage(fileDsc, req, &reqlen);
     HttpGetRequest o;
-    o.parseReq(msg);
+    o.parseReq(req);
+    cout << "Length: " << reqlen << endl;
     cout << "Path: " << o.getPath() << endl;
     cout << endl << "Host: " << o.getHost() << endl;
     cout << endl << "Protocol Version: " << o.getProtocolVersion() << endl;
     cout << endl << "Generated HttpRequest: " << endl << o.genReq();
+
+    char* resp;
+    int resplen = 0;
+    receivemessage(fileDsc, resp, &resplen);
+    HttpResponse p;
+    p.parseReq(resp);
+    cout << "Length: " << resplen << endl;
+    cout << "Protocol Version: " << p.getProtocolVersion() << endl;
+    cout << endl << "Status Code: " << p.getStatusCode() << endl;
+    cout << endl << "Status: " << p.getStatus() << endl;
+    cout << endl << "Content-Type: " << p.getContentLength();
+    cout << endl << "Payload: " << p.getPayload();
+    cout << endl << "Generated HttpResponse: " << endl << p.genReq();
 
     close(fileDsc); // close file descriptor
 }
