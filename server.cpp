@@ -60,6 +60,14 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
     }
 }
 
+int sendmessage (int clientSockfd, const char* msg, int len) {
+    if (send(clientSockfd, msg, len, MSG_NOSIGNAL) == -1) {
+      perror("send");
+      return 6;
+    }
+    return 0;
+}
+
 int receivemessage (int sockfd, char* &result, int* messageLen) {
 
   // send/receive data to/from connection
@@ -110,18 +118,8 @@ void clientHandler (int fileDsc) {
     cout << endl << "Protocol Version: " << o.getProtocolVersion() << endl;
     cout << endl << "Generated HttpRequest: " << endl << o.genReq();
 
-    char* resp;
-    int resplen = 0;
-    receivemessage(fileDsc, resp, &resplen);
-    HttpResponse p;
-    p.parseReq(resp);
-    cout << "Length: " << resplen << endl;
-    cout << "Protocol Version: " << p.getProtocolVersion() << endl;
-    cout << endl << "Status Code: " << p.getStatusCode() << endl;
-    cout << endl << "Status: " << p.getStatus() << endl;
-    cout << endl << "Content-Type: " << p.getContentLength();
-    cout << endl << "Payload: " << p.getPayload();
-    cout << endl << "Generated HttpResponse: " << endl << p.genReq();
+    string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nHello");
+    sendmessage(fileDsc, resp.c_str(), resp.length());
 
     close(fileDsc); // close file descriptor
 }

@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include <string>
 
+#include "HttpRequest.h"
+#include "HttpResponse.h"
+
 using namespace std;
 
 typedef struct addrinfo AddressInfo;
@@ -21,6 +24,10 @@ typedef struct addrinfo AddressInfo;
 // Same story with these; I dunno if I can move this into returnDesc()
 AddressInfo hints;                          // Address information of server to connect to
 AddressInfo *servinfo, *p;                  // servinfo - linked list of possible servers
+
+const int BUFFER_LEN = 20;
+
+bool endAll = false; // ends all infinite loops
 
 // Handles parsing and errors
 void parse(int argcount, char* argval[], char* urls[], char* ports[], char* paths[]) {
@@ -156,14 +163,50 @@ void cleanConnection(int *socketDes) {
 }
 
 int sendmessage (int clientSockfd, const char* msg, int len) {
-    cout << "before send" << endl;
     if (send(clientSockfd, msg, len, MSG_NOSIGNAL) == -1) {
       perror("send");
       return 6;
     }
-    cout << "after send" << endl;
     return 0;
 }
+
+int receivemessage (int sockfd, char* &result, int* messageLen) {
+
+  // send/receive data to/from connection
+  char buf[BUFFER_LEN] = {0};
+  string raw = "";
+
+  while (!endAll) {
+    memset(buf, '\0', sizeof(buf));
+
+    bool started = false;
+    int bytesRead = 0;
+
+    if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) {
+      perror("recv");
+      exit(0);
+    }
+
+    if (!started && bytesRead > 0) {
+        started = true;
+    }
+
+    if (started) {
+        raw += buf;
+
+        if (bytesRead < BUFFER_LEN-1) {
+            cout << raw << endl;
+            // finished reading
+            result = new char[raw.length()];
+            *messageLen = raw.length();
+            strncpy(result, raw.c_str(), raw.length());
+            return 0;
+        }
+    }
+  }
+  return 0;
+}
+
 
 int main (int argc, char *argv[]) 
 {
@@ -180,7 +223,6 @@ int main (int argc, char *argv[])
 	//	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
 	string req ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
-	string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nHello");
     // Initialize the connection
     for (int i = 0; i < argc-1; i++) {
     	returnDesc(ports[i], urls[i], &sockfd);
@@ -188,7 +230,19 @@ int main (int argc, char *argv[])
    		cout << "start" << endl;
 
     	sendmessage(sockfd, req.c_str(), req.length());
-    	sendmessage(sockfd, resp.c_str(), resp.length());
+
+	    char* resp;
+	    int resplen = 0;
+	    receivemessage(sockfd, resp, &resplen);
+	    HttpResponse p;
+	    p.parseReq(resp);
+	    cout << "Length: " << resplen << endl;
+	    cout << "Protocol Version: " << p.getProtocolVersion() << endl;
+	    cout << endl << "Status Code: " << p.getStatusCode() << endl;
+	    cout << endl << "Status: " << p.getStatus() << endl;
+	    cout << endl << "Content-Type: " << p.getContentLength();
+	    cout << endl << "Payload: " << p.getPayload();
+	    cout << endl << "Generated HttpResponse: " << endl << p.genReq();
 
    		cout << "Success!" << endl;
 
