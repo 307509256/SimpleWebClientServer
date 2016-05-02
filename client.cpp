@@ -179,8 +179,7 @@ int main (int argc, char *argv[])
 	cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
 	//	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
-	string msg ("Hello world");
-	string closemsg ("close");
+	string msg ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
 
     // Initialize the connection
     for (int i = 0; i < argc-1; i++) {
@@ -189,7 +188,6 @@ int main (int argc, char *argv[])
    		cout << "start" << endl;
 
     	sendmessage(sockfd, msg.c_str(), msg.length());
-    	sendmessage(sockfd, closemsg.c_str(), closemsg.length());
 
    		cout << "Success!" << endl;
 

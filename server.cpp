@@ -16,13 +16,15 @@
 #include <sstream>
 #include <thread>
 #include <csignal>
+#include "HttpRequest.h"
+#include "HttpResponse.h"
 
 using namespace std;
 
-typedef struct addrinfo AddressInfo; 
+typedef struct addrinfo AddressInfo;
 typedef struct sockaddr_in SocketAddress;
 
-const int BUFFER_LEN = 100;
+const int BUFFER_LEN = 20;
 
 // these have to be global for signal handler to use them
 int socketDsc;                              // Socket descriptor
@@ -62,16 +64,15 @@ int receivemessage (int sockfd, char* &result, int* messageLen) {
 
   // send/receive data to/from connection
   char buf[BUFFER_LEN] = {0};
-  *messageLen = 0;
+  string raw = "";
 
   while (!endAll) {
     memset(buf, '\0', sizeof(buf));
 
     bool started = false;
     int bytesRead = 0;
-    string raw = "";
 
-    if ((bytesRead = recv(sockfd, buf, BUFFER_LEN, 0)) == -1) {
+    if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) {
       perror("recv");
       exit(0);
     }
@@ -82,12 +83,14 @@ int receivemessage (int sockfd, char* &result, int* messageLen) {
 
     if (started) {
         raw += buf;
-        messageLen += bytesRead;
 
-        if (bytesRead < BUFFER_LEN) {
+        if (bytesRead < BUFFER_LEN-1) {
+            cout << raw << endl;
             // finished reading
-            result = new char[*messageLen];
-            strncpy(result, raw.c_str(), *messageLen);
+            result = new char[raw.length()];
+            *messageLen = raw.length();
+            strncpy(result, raw.c_str(), raw.length());
+            cout << result << endl;
             return 0;
         }
     }
@@ -101,6 +104,12 @@ void clientHandler (int fileDsc) {
     int msglen = 0;
     receivemessage(fileDsc, msg, &msglen);
     cout << msg << endl;
+    HttpGetRequest o;
+    o.parseReq(msg);
+    cout << "Path: " << o.getPath() << endl;
+    cout << endl << "Host: " << o.getHost() << endl;
+    cout << endl << "Protocol Version: " << o.getProtocolVersion() << endl;
+    cout << endl << "Generated HttpRequest: " << endl << o.genReq();
 
     close(fileDsc); // close file descriptor
 }

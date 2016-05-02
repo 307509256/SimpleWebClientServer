@@ -4,11 +4,13 @@ CFLAGS= -g -Wall -Werror
 MTOPTIONS =-pthread -std=c++11 
 
 # --- targets
-all: client server HttpRequest.o HttpRespose.o
-client:
-	$(GPP) $(CFLAGS) client.cpp -o client.out    
-server:
-	$(GPP) $(CFLAGS) server.cpp -o server.out $(MTOPTIONS)
+all: client.o server.o HttpRequest.o HttpResponse.o
+	$(GPP) client.o HttpRequest.o HttpResponse.o -o client.out
+	$(GPP) server.o HttpRequest.o HttpResponse.o -o server.out $(MTOPTIONS)
+client.o:
+	$(GPP) $(CFLAGS) -c client.cpp -o client.o   
+server.o:
+	$(GPP) $(CFLAGS) -c server.cpp -o server.o $(MTOPTIONS)
 HttpRequest.o:
 	$(GPP) $(CFLAGS) -c HttpRequest.cpp -o HttpRequest.o
 HttpRespose.o:
