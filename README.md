@@ -1,7 +1,17 @@
 CS118Proj1
 
-So far, we only have the HTTP abstraction classes; I'm not sure how we will parse the data for the 
-"Accept" and "data" vectors for the HTTP request and response respectively.
+Our implementation of a multithreaded web server, where the client sends HTTP
+GET requests to an arbitrary server, and receives an ASCII only HTTP response.
 
-Right now, I will attempt to implement a single threaded web server, and we can all sit, and figure
-out how to multithread it.
+The multithreaded web server allows connections from multiple web clients, and
+responds with an HTTP response, with the file, if it exists in the working
+directory.
+
+INSTALL: 
+Client-Server: run "make" from the same directory that you found the readme
+Client: run "make client"
+Server: run "make server"
+Parser Test: to test the parser, run "make parsertest"
+
+UNINSTALL:
+run "make clean"

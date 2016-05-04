@@ -1,8 +1,15 @@
+/*
+    A lot of the initial socket code was influenced by the examples placed by Beej
+    in the Network Programming Guide; we found his section on GetAddrInfo especially
+    helpful when developing an initial client-server model.
+*/
+
 // C++ headers
 #include <fstream>
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 
 // Kernel Includes
 #include <sys/socket.h>
@@ -12,108 +19,121 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <string>
 
+// User defined class includes
 #include "HttpRequest.h"
 #include "HttpResponse.h"
+#include "Helper.h"
 
 using namespace std;
 
 typedef struct addrinfo AddressInfo;
 
 // Same story with these; I dunno if I can move this into returnDesc()
-AddressInfo hints;                          // Address information of server to connect to
-AddressInfo *servinfo, *p;                  // servinfo - linked list of possible servers
+AddressInfo hints;          // Address information of server to connect to
+AddressInfo *servinfo, *p;  // Servinfo - linked list of possible servers
 
-const int BUFFER_LEN = 20;
+// The length of each segment we will accept
+//const int BUFFER_LEN = 20;
 
 bool endAll = false; // ends all infinite loops
 
 // Handles parsing and errors
-void parse(int argcount, char* argval[], char* urls[], char* ports[], char* paths[]) {
+void parse(int argcount, char* argval[], char* urls[], char* ports[], char* paths[]) 
+{
     // Display help message if the number of arguments are incorrect
-    if (argcount == 1) {
+    if (argcount == 1) 
+    {
         // argval[0] is the program name
         cout << "Usage: " << argval[0] << " <URL> <URL> ..." << endl;
         exit(0);
     }
 
-	// Temporary holder for each argument
-	char* arg;
+    // Temporary holder for each argument
+    char* arg;
 
     // argval[1] through argval[arcount-1] are the desired URLs
-    for (int i = 1; i < argcount; i++) {
-    	// Get the i-th argument (after the program name)
-		arg = argval[i];
-		unsigned int len = strlen(arg);
+    for (int i = 1; i < argcount; i++) 
+    {
+        // Get the i-th argument (after the program name)
+        arg = argval[i];
+        unsigned int len = strlen(arg);
 
-		// Remove http:// from start of argument
-		char temp[8];
-		unsigned int j = 0;
-		for (; j < 7; j++) {
-			temp[j] = arg[j];
-		}
-		temp[7] = '\0';
-		if (strcmp(temp, "http://\0"))
-			j = 0;
+        // Remove http:// from start of argument
+        char temp[8];
+        unsigned int j = 0;
+        for (; j < 7; j++) 
+        {
+            temp[j] = arg[j];
+        }
+        temp[7] = '\0';
+        if (strcmp(temp, "http://\0"))
+            j = 0;
 
-		// Temporary helper variables
-		int u = 0;
-		char url[len];
-		int p = 0;
-		char port[6] = "";
-		int h = 0;
-		char path[len];
+        // Temporary helper variables
+        int u = 0;
+        char url[len];
+        int p = 0;
+        char port[6] = "";
+        int h = 0;
+        char path[len];
 
-		// Parse the host name and port number
-		for (; j < len; j++) {
-			// Find start of port number
-			if (arg[j] == ':' && arg[j+1] != '\0' && isdigit(arg[j+1])) {
-				j++;
-				// Extract port #
-				while (arg[j] != '/' && arg[j] != '\0')
-					port[p++] = arg[j++];
-				if (arg[j] == '/')
-					j--;
-			}
-			// If no port number and end of host name
-			else if (arg[j] == '/')
-				// Parse the path
-				while (arg[j] != '\0')
-					path[h++] = arg[j++];
-			// Otherwise, add element to host name
-			else
-				url[u++] = arg[j];
-		}
+        // Parse the host name and port number
+        for (; j < len; j++) 
+        {
+            // Find start of port number
+            if (arg[j] == ':' && arg[j+1] != '\0' && isdigit(arg[j+1])) 
+            {
+                j++;
+                // Extract port #
+                while (arg[j] != '/' && arg[j] != '\0')
+                    port[p++] = arg[j++];
+                if (arg[j] == '/')
+                    j--;
+            }
+            // If no port number and end of host name
+            else if (arg[j] == '/')
+                // Parse the path
+                while (arg[j] != '\0')
+                    path[h++] = arg[j++];
+            // Otherwise, add element to host name
+            else
+                url[u++] = arg[j];
+        }
 
-		// Null-terminate and remove unneccesary slashes
-		if (url[u-1] == '/')
-			url[u-1] = '\0';
-		else
-			url[u] = '\0';
-		// Default value for port #
-		if (!strcmp(port, ""))
-			strcpy(port, "4000");
-		else
-			port[p] = '\0';
-		// Default value for path
-		if (!strcmp(path, ""))
-			strcpy(path, "/\0");
-		else
-			path[h] = '\0';
+        // Null-terminate and remove unneccesary slashes
+        if (url[u-1] == '/')
+            url[u-1] = '\0';
+        else
+            url[u] = '\0';
+        
+        // Default value for port #
+        if (!strcmp(port, ""))
+            strcpy(port, "4000");
+        else
+            port[p] = '\0';
 
-		// Allocate space for elements
-		urls[i-1] = new char [strlen(url)];
-		paths[i-1] = new char [strlen(path)];
-		ports[i-1] = new char [6];
-		// Add parsed argument to respective arrays
-		strcpy(urls[i-1], url);
-		strcpy(ports[i-1], port);
-		strcpy(paths[i-1], path);
-	}
+        // Default value for path
+        if (!strcmp(path, ""))
+            strcpy(path, "/\0");
+        else
+            path[h] = '\0';
+
+        // Allocate space for elements
+        urls[i-1] = new char [strlen(url)];
+        paths[i-1] = new char [strlen(path)];
+        ports[i-1] = new char [6];
+
+        // Add parsed argument to respective arrays
+        strcpy(urls[i-1], url);
+        strcpy(ports[i-1], port);
+        strcpy(paths[i-1], path);
+    }
 }
 
-void returnDesc(char* &portN, char* &hostN, int *socketDes) {
+// Returns a socket file descriptor, given a connection to hostN at portN
+void returnDesc(char* &portN, char* &hostN, int *socketDes) 
+{
     // Zero out the hints
     memset(&hints, 0, sizeof hints);
 
@@ -155,99 +175,72 @@ void returnDesc(char* &portN, char* &hostN, int *socketDes) {
     } 
 }
 
-void cleanConnection(int *socketDes) {
+// Free the server address information; close the descriptor
+void cleanConnection(int *socketDes) 
+{
     // Done with this structure
     freeaddrinfo(servinfo);
     // Close socket
     close(*socketDes);
 }
 
-int sendmessage (int clientSockfd, const char* msg, int len) {
-    if (send(clientSockfd, msg, len, MSG_NOSIGNAL) == -1) {
-      perror("send");
-      return 6;
-    }
-    return 0;
-}
-
-int receivemessage (int sockfd, char* &result, int* messageLen) {
-
-  // send/receive data to/from connection
-  char buf[BUFFER_LEN] = {0};
-  string raw = "";
-
-  while (!endAll) {
-    memset(buf, '\0', sizeof(buf));
-
-    bool started = false;
-    int bytesRead = 0;
-
-    if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) {
-      perror("recv");
-      exit(0);
-    }
-
-    if (!started && bytesRead > 0) {
-        started = true;
-    }
-
-    if (started) {
-        raw += buf;
-
-        if (bytesRead < BUFFER_LEN-1) {
-            cout << raw << endl;
-            // finished reading
-            result = new char[raw.length()];
-            *messageLen = raw.length();
-            strncpy(result, raw.c_str(), raw.length());
-            return 0;
-        }
-    }
-  }
-  return 0;
-}
-
-
 int main (int argc, char *argv[]) 
 {
     // Variable declarations
     int sockfd;                                 // File descriptor for the socket
-
-	char** urls = new char* [argc-1];
-	char** paths = new char* [argc-1];
-	char** ports = new char* [argc-1];
+    char** urls = new char* [argc-1];           // Stores the urls to be processed
+    char** paths = new char* [argc-1];          // Stores the path of the desired file
+    char** ports = new char* [argc-1];          // Stores the port numbers of each request
 
     // Parse the input
     parse(argc, argv, urls, ports, paths);
-	cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
-	//	cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
 
-	string req ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
+    /*
+    // Debugging only: Check if the parsing is working
+    cout << urls[0] << endl << ports[0] << endl << paths[0] << endl;
+    cout << urls[1] << endl << ports[1] << endl << paths[1] << endl;
+    */ 
+    
     // Initialize the connection
-    for (int i = 0; i < argc-1; i++) {
-    	returnDesc(ports[i], urls[i], &sockfd);
+    for (int i = 0; i < argc-1; i++) 
+    {
+        // Generate a socket desciptor for the connection
+        returnDesc(ports[i], urls[i], &sockfd);
+        
+        /*
+        // Debugging only: mark start phase
+        cout << "Start" << endl;
+        */
 
-   		cout << "start" << endl;
+        // ToDo:
+        // Generate the GET request, and send it to the server
+        string req ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
+        // Send the generated request message
+        sendMessage(sockfd, req.c_str(), req.length());
 
-    	sendmessage(sockfd, req.c_str(), req.length());
+        // Parse the appropriate response message
+        char* resp;         // Buffer to store the response
+        int resplen = 0;    // The length of the response
+        HttpResponse p;     // Class to parse the response buffer
 
-	    char* resp;
-	    int resplen = 0;
-	    receivemessage(sockfd, resp, &resplen);
-	    HttpResponse p;
-	    p.parseReq(resp);
-	    cout << "Length: " << resplen << endl;
-	    cout << "Protocol Version: " << p.getProtocolVersion() << endl;
-	    cout << endl << "Status Code: " << p.getStatusCode() << endl;
-	    cout << endl << "Status: " << p.getStatus() << endl;
-	    cout << endl << "Content-Type: " << p.getContentLength();
-	    cout << endl << "Payload: " << p.getPayload();
-	    cout << endl << "Generated HttpResponse: " << endl << p.genReq();
+        receiveMessage(sockfd, resp, &resplen, endAll);     // Get the response                             
+        p.parseReq(resp);                                   // Parse the response
 
-   		cout << "Success!" << endl;
+        /*
+        // Debugging only: Show parsed response
+        cout << "Length: " << resplen << endl;
+        cout << "Protocol Version: " << p.getProtocolVersion() << endl;
+        cout << endl << "Status Code: " << p.getStatusCode() << endl;
+        cout << endl << "Status: " << p.getStatus() << endl;
+        cout << endl << "Content-Type: " << p.getContentLength();
+        cout << endl << "Payload: " << p.getPayload();
+        cout << endl << "Generated HttpResponse: " << endl << p.genReq();
+        cout << "Success!" << endl;
+        */
 
-    	// Close the connection
-    	cleanConnection(&sockfd);
+        // Close the connection
+        cleanConnection(&sockfd);
     }
+
     return 0;
 }
