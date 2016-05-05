@@ -1,8 +1,5 @@
 #include "Helper.h"
 
-// The length of each segment we will accept
-const int BUFFER_LEN = 20;
-
 // Send a message to the server/client
 int sendMessage(int clientSockfd, const char* msg, int len) 
 {
@@ -21,12 +18,13 @@ int receiveMessage(int sockfd, char* &result, int* messageLen, int end)
     // send/receive data to/from connection
     char buf[BUFFER_LEN] = {0};
     std::string raw = "";
+    bool started = false;               // Just a flag, to make sure that data was sent
+    int sleepcount = 0;
+    int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
 
     while (!end) 
     {
         memset(buf, '\0', sizeof(buf));     // Zero out the buffer
-        bool started = false;               // Just a flag, to make sure that data was sent
-        int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
 
         // Receive over the file descriptor
         if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) 
@@ -47,15 +45,27 @@ int receiveMessage(int sockfd, char* &result, int* messageLen, int end)
             // Finished reading; copy the buffer over
             if (bytesRead < BUFFER_LEN-1) 
             {
+                if (sleepcount < 5) 
+                {
+                    usleep(1000);
+                    sleepcount++;
+                    continue;
+                }
                 /*
                 // Debugging only: comment out
                 cout << raw << endl;
                 */
+
+                raw += '\0'; // add null terminator
                 
                 result = new char[raw.length()];
                 *messageLen = raw.length();
                 std::strncpy(result, raw.c_str(), raw.length());
                 return 0;
+            } 
+            else 
+            {
+                sleepcount = 0;
             }
         }
     }
@@ -97,16 +107,21 @@ int errorStatus(char* &path, char* protocolVersion)
     return flag;
 }
 
-void getFilename(std::string &fPath)
+void getFilename(char* &filePath)
 {
+    std::string fPath(filePath);
+    std::string temp = "";
+
     // Handle index.html
     if(fPath == "/")
     {
         fPath = "index.html";
+        delete filePath;
+        filePath = new char [fPath.length()];
+        std::strcpy(filePath, fPath.c_str());
         return;
     }
 
-    std::string temp = "";
     for(size_t i = (fPath.length() - 1); i > 0; i--)
     {
         if(fPath[i] != '/')
@@ -124,4 +139,9 @@ void getFilename(std::string &fPath)
     {
         fPath[i] = temp[(temp.length()-1)-i];
     }
+    fPath[temp.length()] = 0;
+
+    delete filePath;
+    filePath = new char [fPath.length()];
+    std::strcpy(filePath, fPath.c_str());
 }

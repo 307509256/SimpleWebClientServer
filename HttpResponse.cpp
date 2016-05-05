@@ -161,11 +161,14 @@ void HttpResponse::parseReq(char *buffer)
 			std::string check = "";
 			check += getR.substr(i, 4);
 
-			//Check for double '\r\n\r\n'
+			// Check for double '\r\n\r\n'
 			if (check == "\r\n\r\n")
 			{
-				//The rest is data
-				std::cout << "i: " << i << " ";
+				// Parse it if it has content length; or set the content length value, if 0
+				if (this->contentLength <= 0) 
+					this->contentLength = strlen(buffer+i+4);
+
+				// The rest is data
 				this->payload = new char [this->contentLength+1];
 				strncpy(this->payload, buffer+i+4, this->contentLength);
 				this->payload[this->contentLength] = 0;

@@ -211,7 +211,7 @@ int main (int argc, char *argv[])
         // Debugging only: mark start phase
         cout << "Start" << endl;
         //Debugging Only: Testing if get requests are sent
-        string req ("GET /index.html HTTP/1.1\r\nHost: www-net.cs.umass.edu\r\nUser-Agent: Firefox/3.6.10\r\nAccept: text/html,application/xhtml+xml\r\nAccept-Language: en-us,en;q=0.5\r\nAccept-Encoding: gzip,deflate\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7\r\nKeep-Alive: 115\r\nConnection: keep-alive\r\n\r\n");
+        string req ("GET /index.html HTTP/1.0\r\nAccept-Language: en-us\r\nHost: web.cs.ucla.edu\r\nUser-Agent: web-client1.0");
         // Send the generated request message
         sendMessage(sockfd, req.c_str(), req.length());
         */
@@ -228,39 +228,31 @@ int main (int argc, char *argv[])
         int resplen = 0;    // The length of the response
         HttpResponse p;     // Class to parse the response buffer
         // Get the response   
-        receiveMessage(sockfd, resp, &resplen, endAll);     
+        receiveMessage(sockfd, resp, &resplen, endAll);
         // Parse the response                          
         p.parseReq(resp); 
 
-        /*                                  
-        // What will we call the file?
-        string pathFileName = g.getPath();
-        getFilename(pathFileName);
-        // Create the file descriptor to store the data
-        if(p.getStatusCode() == 200)
-        {
-            // Create the file
-            int save = open(pathFileName.c_str(), O_CREAT, 0666);
-            write(save, p.getPayload() , p.getContentLength());
-        }
-        else
-        {
+        if (p.getStatusCode() != 200) {
             // Request Error?
             cerr << "Error " << p.getStatusCode() << ": " << p.getStatus() << endl; 
-        }
-        */
-        if(p.getStatusCode() == 200)
-        {
-            // Create the file
-            int save = open("index.html", O_CREAT, 0666);
-            write(save, p.getPayload() , p.getContentLength());
-        }
-        else
-        {
-            // Request Error?
-            cerr << "Error " << p.getStatusCode() << ": " << p.getStatus() << endl; 
+            cleanConnection(&sockfd);
+            exit(0);
         }
 
+        cout << endl << endl << resp << endl;
+                                  
+        // What will we call the file?
+        char* saveFileName = new char [strlen(g.getPath())];
+        strcpy(saveFileName, g.getPath());
+        getFilename(saveFileName);
+        // Create the file descriptor to store the data
+
+        // Create the file
+        int save = open(saveFileName, O_CREAT|O_RDWR|O_TRUNC, 0666);
+        write(save, p.getPayload(), p.getContentLength());
+        cout << "finished writing: " << g.getPath() << ". Length: " << p.getContentLength() << endl;
+
+        /*
         // Debugging only: Show parsed response
         cout << "Length: " << resplen << endl;
         cout << "Protocol Version: " << p.getProtocolVersion() << endl;
@@ -270,7 +262,8 @@ int main (int argc, char *argv[])
         cout << endl << "Payload: " << p.getPayload();
         cout << endl << "Generated HttpResponse: " << endl << p.genReq();
         cout << "Success!" << endl;
-
+        */
+        
         // Close the connection
         cleanConnection(&sockfd);
     }
