@@ -146,8 +146,12 @@ void HttpResponse::parseReq(char *buffer)
 			std::string check = "";
 			check += getR.substr(i, 16);
 
+			// Check lowercase
+			for(size_t ctr = 0; ctr < check.length(); ctr++)
+				check[ctr] = tolower(check[ctr]);
+
 			// Check if the string that was stored is "GET "
-			if(check == "Content-Length: ")
+			if(check == "content-length: ")
 			{
 				char* contentSize;	// Store the length in ASCII
 				this->helper(buffer+i+16, contentSize); // Store the value

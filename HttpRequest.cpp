@@ -1,6 +1,4 @@
 #include "HttpRequest.h"
-#include <iostream>
-#include <string>
 
 // Default constructor
 HttpGetRequest::HttpGetRequest()
@@ -102,7 +100,7 @@ void HttpGetRequest::parseReq(char* buffer)
 		}
 
 		// Parse Host
-		if(getR[i] == 'H')
+		if(getR[i] == 'H' || getR[i] == 'h')
 		{
 			// Try and store "Host  " in the c++ string
 			std::string check = "";
@@ -113,8 +111,12 @@ void HttpGetRequest::parseReq(char* buffer)
 			check += getR[i+4];
 			check += getR[i+5];
 
+			// Make string lowercase
+			for(size_t ctr = 0; ctr < check.length(); ctr++)
+				check[ctr] = tolower(check[ctr]);
+
 			// Check if the string that was stored is "Host "
-			if(check == "Host: ")
+			if(check == "host: ")
 				this->helper(buffer+(i+6), this->host);
 		}
 	}

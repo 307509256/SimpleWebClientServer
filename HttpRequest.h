@@ -1,8 +1,10 @@
 #ifndef __HTTPREQ__
 #define __HTTPREQ__
 
+#include <iostream>
 #include <cstring>
 #include <string>
+#include <locale>
 
 class HttpGetRequest 
 {

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <locale>
 
 class HttpResponse
 {
