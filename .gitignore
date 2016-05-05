@@ -27,3 +27,6 @@ ptest
 *.exe
 *.out
 *.app
+
+# Generated Files
+*.html
