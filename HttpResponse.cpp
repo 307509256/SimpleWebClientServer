@@ -136,7 +136,7 @@ void HttpResponse::parseReq(char *buffer)
 			delete stCd;	// We thank you for your help
 
 			// Parse status message
-			this->helper(buffer+sLength, this->status);
+			this->genStatus(this->statusCode);
 		}
 
 		// Parse Content-Length
@@ -165,6 +165,7 @@ void HttpResponse::parseReq(char *buffer)
 			if (check == "\r\n\r\n")
 			{
 				//The rest is data
+				std::cout << "i: " << i << " ";
 				this->payload = new char [this->contentLength+1];
 				strncpy(this->payload, buffer+i+4, this->contentLength);
 				this->payload[this->contentLength] = 0;

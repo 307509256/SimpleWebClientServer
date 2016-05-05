@@ -63,3 +63,65 @@ int receiveMessage(int sockfd, char* &result, int* messageLen, int end)
     // Should never reach this point; but just in case...
     return 0;
 }
+
+// Checks if there is an error in the passed in string
+int errorStatus(char* &path, char* protocolVersion)
+{
+    int flag = 0;
+
+    // Its simple to treat / as 404
+    if(std::strcmp(path, "/") == 0)
+    {
+        return 404;
+    }
+    // Else check if the file exists, like one usually would
+    else
+    {
+        if(access(path, R_OK) == 0)
+            flag = 200;
+        else
+            return 404;
+    }
+
+    // Check if the protocol version is valid
+    if(std::strcmp(protocolVersion, "HTTP/1.0") == 0)
+    {
+        flag = 200;
+    }
+    else
+    {
+        return 400;
+    }
+
+    // Return the result
+    return flag;
+}
+
+void getFilename(std::string &fPath)
+{
+    // Handle index.html
+    if(fPath == "/")
+    {
+        fPath = "index.html";
+        return;
+    }
+
+    std::string temp = "";
+    for(size_t i = (fPath.length() - 1); i > 0; i--)
+    {
+        if(fPath[i] != '/')
+        {
+            temp += fPath[i];
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    fPath = "";
+    for(size_t i = 0; i < temp.length(); i++)
+    {
+        fPath[i] = temp[(temp.length()-1)-i];
+    }
+}
