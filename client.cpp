@@ -269,6 +269,11 @@ int receiveResponseBody(int sockfd, HttpResponse* response, int saveFd, int end)
             if (totalBytesRead >= response->getContentLength()) {
                 return 0;
             }
+            if (bytesRead == 0) {
+                cerr << "Connection closed before content length reached" << endl;
+                cout << totalBytesRead << "/" << response->getContentLength() << " bytes received" << endl;
+                return 1;
+            }
         } else {
             // If ContentLength is empty, then wait until connection close
             if (bytesRead == 0) {

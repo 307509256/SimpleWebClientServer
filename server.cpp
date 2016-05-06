@@ -112,6 +112,8 @@ void clientHandler (int fileDsc)
     string fileDataStr = "";
     int fileSize = 0;
     int bytesRead = 0;
+    int totalBytesRead = 0;
+    int fd;
 
     if (status != 200) {
         // error, send error response
@@ -119,28 +121,46 @@ void clientHandler (int fileDsc)
     } else {
         cout << "opening... " << endl; 
         // Create the file 
-        int fd = open(fullpath, O_RDONLY, 0666);
-        if (fd <= 0) {
+        fd = open(fullpath, O_RDONLY, 0666);
+        struct stat stat_buf;
+        int rc = fstat(fd, &stat_buf);
+        if (fd <= 0 || rc != 0) {
             // error opening file, send 404 response
             cout << "Error opening " << fullpath << endl;
             resp = new HttpResponse(404);
         } else {
-            char* fileData = new char[BUFFER_LEN+1];
-            fileData[BUFFER_LEN] = '\0'; // add null terminater
-            while ((bytesRead = read(fd, fileData, BUFFER_LEN)) > 0) {
-                fileDataStr += fileData;
-                fileSize += bytesRead;
-            }
-            cout << "finished reading. " << fullpath << " is " << fileSize << " bytes long" << endl;
-            cout << fileData << endl;
-            fileData = new char[fileDataStr.length()];
-            strcpy(fileData, fileDataStr.c_str());
-            resp = new HttpResponse(fileSize, 200, fileData);
+            fileSize = stat_buf.st_size;
+            char* nullbyte = new char[1];
+            nullbyte[0] = '\0';
+            resp = new HttpResponse(fileSize, 200, nullbyte);
         }
     }
 
-    string respStr = resp->genReq(); 
+    string respStr = resp->genReq();
     sendMessage(fileDsc, respStr.c_str(), respStr.length());
+
+    if (fileSize > 0) {
+
+        char* fileData = new char[BUFFER_LEN+1];
+        fileData[BUFFER_LEN] = '\0'; // add null terminater
+        while ((bytesRead = read(fd, fileData, BUFFER_LEN)) > 0) {
+            sendMessage(fileDsc, fileData, bytesRead);
+            totalBytesRead += bytesRead;
+        }
+
+        if (totalBytesRead < fileSize) {
+            cerr << "Actual file size does not match fstat file size!" << endl;
+            // keep sending null bytes until the amount we send matches the value we sent in ContentLength
+            int bytesLeft = fileSize-totalBytesRead;
+            fileData = new char[bytesLeft];
+            memset(fileData, 0, bytesLeft);
+            sendMessage(fileDsc, fileData, bytesLeft);
+        }
+
+        cout << "sent " << totalBytesRead << "/" << fileSize << " bytes" << endl;
+    }
+
+
     cout << "done" << endl;
 
     // Close the file descriptor for this instance
