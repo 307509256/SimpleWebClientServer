@@ -81,15 +81,15 @@ int errorStatus(char* &path, char* protocolVersion)
             return 404;
     }
 
-    // Check if the protocol version is valid
-    if(std::strcmp(protocolVersion, "HTTP/1.0") == 0)
-    {
-        flag = 200;
-    }
-    else
-    {
-        return 400;
-    }
+    // // Check if the protocol version is valid
+    // if(std::strcmp(protocolVersion, "HTTP/1.0") == 0)
+    // {
+    //     flag = 200;
+    // }
+    // else
+    // {
+    //     return 400;
+    // }
 
     // Return the result
     return flag;

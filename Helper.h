@@ -12,7 +12,7 @@
 
 
 // The length of each segment we will accept
-const int BUFFER_LEN = 20;
+const int BUFFER_LEN = 512;
 
 
 // Function declarations

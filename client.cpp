@@ -237,7 +237,12 @@ int receiveResponseBody(int sockfd, HttpResponse* response, int saveFd, int end)
 {
     // send/receive data to/from connection
     char buf[BUFFER_LEN] = {0};
-    unsigned int totalBytesRead = strlen(response->getPayload());
+    unsigned int totalBytesRead = 0;
+
+    // write initial payload
+    write(saveFd, response->getPayload(), strlen(response->getPayload()));
+    totalBytesRead += strlen(response->getPayload());
+
     int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
     int currSleepLength = 0;
 
