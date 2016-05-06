@@ -23,6 +23,7 @@ protected:
 	// Protected  helper functions
 	// Generate status message
 	void genStatus(int statusC);
+	void genProtocol(float protocol);
 	// Parsing Helper
 	void helper(char* buffer, char* &dataToStore);
 	// Clear all pointers and buffers
@@ -33,6 +34,7 @@ public:
 	HttpResponse();
 	// Parameterized Constructor 
 	HttpResponse(double payloadLen, int StatCode, char* htmlPayload);
+	HttpResponse(int errorStatus);
 	// Destructor
 	~HttpResponse();
 

@@ -19,13 +19,40 @@ HttpResponse::HttpResponse(double payloadLen, int StatCode, char* htmlPayload)
 	this->genStatus(this->statusCode);
 	this->payload = new char [std::strlen(htmlPayload)];
 	std::strcpy(this->payload, htmlPayload);
+	this->genProtocol(1.0);
 	this->headerComplete = true;
+}
+
+// Error Response 
+HttpResponse::HttpResponse(int errorStatus)
+{
+	this->contentLength = 0;
+	this->statusCode = errorStatus;
+	this->genStatus(this->statusCode);
+	this->payload = NULL;
+	this->response = NULL;
+	this->genProtocol(1.0);
+	this->headerComplete = false;
 }
 
 // Destructor
 HttpResponse::~HttpResponse()
 {
 	this->clear();
+}
+
+// Parsing helper function
+void HttpResponse::genProtocol(float protocol)
+{
+	std::string temp = "";
+	if (protocol >= 1.1) {
+		temp = "HTTP/1.1";
+	} else {
+		temp = "HTTP/1.0";
+	}
+
+	this->protocolVersion = new char [temp.length()];
+	std::strcpy(this->protocolVersion, temp.c_str());
 }
 
 // Parsing helper function
@@ -103,7 +130,7 @@ char* HttpResponse::genReq()
 	temp += "Content-Length: "; 
 	temp += contentLengthStr;
 	temp += "\r\n\r\n";
-	temp += payload;
+	if (payload != NULL) temp += payload;
 	this->response = new char [temp.length()+1];
 	std::strcpy(this->response, temp.c_str());
 	return this->response;

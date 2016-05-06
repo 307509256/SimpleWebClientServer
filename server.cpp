@@ -39,8 +39,13 @@ typedef struct sockaddr_in SocketAddress;
 int socketDsc;                              // Socket descriptor
 bool endAll = false; // ends all infinite loops
 
-// Handles parsing and errors
-void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char* &host_dir )
+// Server parameters
+char* hostName;     // IP or Domain that we need to connect to 
+char* hostDir;      // Path of directory to host on the server
+char* port;         // Port number to open socket
+
+// Handles parsing and errors 
+void parse( int argcount, char *argval[])
 {
     // Display help message if the number of arguements are incorrect
     if ( argcount != 4 )
@@ -54,21 +59,30 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
     else 
     {
         // argv[1] is the hostname
-        host_name = argval[1];
+        hostName = argval[1];
 
         // argv[2] is the port number
-        port_n = argval[2];
-        int Port = atoi(argval[2]);
-        if(Port <= 0 || Port > 65535)
+        port = argval[2];
+        int portNum = atoi(argval[2]);
+        if(portNum <= 0 || portNum > 65535)
         {
             cerr << "Error: port number is invalid" << endl;
             exit(1);
         }
 
         // argv[3] is the hosting directory
-        host_dir = argval[3];
+        hostDir = argval[3];
     }
 }
+
+char* getFullPath (char* relPath) { 
+    string path = hostDir; 
+    path += relPath; 
+    path += '\0'; 
+    char* fullpath = new char[path.length()]; 
+    strcpy(fullpath, path.c_str()); 
+    return fullpath; 
+} 
 
 // ToDo:
 // Multithreaded handler for each client
@@ -90,15 +104,43 @@ void clientHandler (int fileDsc)
     cout << endl << "Generated HttpRequest: " << endl << o.genReq();
     */
     
-    // Check for errors in the request
-    // ToDo
+    char* fullpath = getFullPath(o.getPath());
 
-    // Send the response
-    string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nH");
-    string resp2 ("ello");
-    sendMessage(fileDsc, resp.c_str(), resp.length());
-    usleep(1000);
-    sendMessage(fileDsc, resp2.c_str(), resp2.length());
+    int status = errorStatus(fullpath, o.getProtocolVersion());
+
+    HttpResponse *resp;
+    string fileDataStr = "";
+    int fileSize = 0;
+    int bytesRead = 0;
+
+    if (status != 200) {
+        // error, send error response
+        resp = new HttpResponse(status);
+    } else {
+        cout << "opening... " << endl; 
+        // Create the file 
+        int fd = open(fullpath, O_RDONLY, 0666);
+        if (fd <= 0) {
+            // error opening file, send 404 response
+            cout << "Error opening " << fullpath << endl;
+            resp = new HttpResponse(404);
+        } else {
+            char* fileData = new char[BUFFER_LEN+1];
+            fileData[BUFFER_LEN] = '\0'; // add null terminater
+            while ((bytesRead = read(fd, fileData, BUFFER_LEN)) > 0) {
+                fileDataStr += fileData;
+                fileSize += bytesRead;
+            }
+            cout << "finished reading. " << fullpath << " is " << fileSize << " bytes long" << endl;
+            cout << fileData << endl;
+            fileData = new char[fileDataStr.length()];
+            strcpy(fileData, fileDataStr.c_str());
+            resp = new HttpResponse(fileSize, 200, fileData);
+        }
+    }
+
+    string respStr = resp->genReq(); 
+    sendMessage(fileDsc, respStr.c_str(), respStr.length());
     cout << "done" << endl;
 
     // Close the file descriptor for this instance
@@ -196,13 +238,8 @@ void interruptHandler (int signum)
 
 int main ( int argc, char *argv[] )
 {
-    // Variable declarations
-    char* hostName;     // IP or Domain that we need to connect to 
-    char* hostDir;      // Path of directory to host on the server
-    char* port;         // Port number to open socket
-
     // Parse the input
-    parse(argc, argv, hostName, port, hostDir);
+    parse(argc, argv);
 
     // Initialize the scoket desctiptor
     initializeSocket(hostName, port, &socketDsc);
