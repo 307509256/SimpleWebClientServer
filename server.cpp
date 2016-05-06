@@ -47,15 +47,57 @@ char* port;         // Port number to open socket
 // Handles parsing and errors 
 void parse( int argcount, char *argval[])
 {
-    // Display help message if the number of arguements are incorrect
-    if ( argcount != 4 )
+    // Only 1 argument; set all values to default
+    if ( argcount == 1 )
     {
-        // We print argv[0] assuming it is the program name
-        cout << "Usage: "<< argval[0] << " <hostname> <port> <hosting_directory>" << endl;
-        exit(0);
+        // Set hostname
+        hostName = new char [10];
+        strcpy(hostName, "localhost");
+
+        // Set port
+        port = new char [5];
+        strcpy(port, "4000");
+
+        // Set directory
+        hostDir = new char [2];
+        strcpy(hostDir, ".");
+
     }
-    
-    // Parse values
+    // Hostname set, rest default
+    else if ( argcount == 2 )
+    {
+        // argv[1] is the hostname
+        hostName = argval[1];
+
+        // Set port
+        port = new char [5];
+        strcpy(port, "4000");
+
+        // Set directory
+        hostDir = new char [2];
+        strcpy(hostDir, ".");
+    }
+    // Hostname and port set, rest default
+    else if ( argcount == 3 )
+    {
+        // argv[1] is the hostname
+        hostName = argval[1];
+
+        // argv[2] is the port number
+        port = argval[2];
+        int portNum = atoi(argval[2]);
+        if(portNum <= 0 || portNum > 65535)
+        {
+            cerr << "Error: port number is invalid" << endl;
+            exit(1);
+        }
+
+        // Set directory
+        hostDir = new char [2];
+        strcpy(hostDir, ".");
+
+    } 
+    // Parse values for all values set
     else 
     {
         // argv[1] is the hostname
@@ -119,14 +161,14 @@ void clientHandler (int fileDsc)
         // error, send error response
         resp = new HttpResponse(status);
     } else {
-        cout << "opening... " << endl; 
+        cerr << "Opening... " << endl; 
         // Create the file 
         fd = open(fullpath, O_RDONLY, 0666);
         struct stat stat_buf;
         int rc = fstat(fd, &stat_buf);
         if (fd <= 0 || rc != 0) {
             // error opening file, send 404 response
-            cout << "Error opening " << fullpath << endl;
+            cerr << "Error opening file " << fullpath << endl;
             resp = new HttpResponse(404);
         } else {
             fileSize = stat_buf.st_size;
@@ -157,11 +199,11 @@ void clientHandler (int fileDsc)
             sendMessage(fileDsc, fileData, bytesLeft);
         }
 
-        cout << "sent " << totalBytesRead << "/" << fileSize << " bytes" << endl;
+        cerr << "Sent " << totalBytesRead << "/" << fileSize << " bytes" << endl;
     }
 
 
-    cout << "done" << endl;
+    cerr << "done" << endl;
 
     // Close the file descriptor for this instance
     close(fileDsc);
@@ -242,14 +284,14 @@ void listenLoop (int socketDesc)
         handler.detach(); // run in background, destroy automatically on end
 
         // Debugging only: Print if successful
-        cout << "Successfully obtained descriptor" << endl;
+        cerr << "Successfully obtained descriptor" << endl;
     }
 }
 
 // Interrupt signal handler
 void interruptHandler (int signum) 
 {
-    cout << "Interrupted! All descriptors closed" << endl;
+    cerr << "Interrupted! All descriptors closed" << endl;
     endAll = true;      // End all infinite loops
     // Don't we need to join the threads here?
     close(socketDsc);   // Close socket to interrupt the socket accept() function

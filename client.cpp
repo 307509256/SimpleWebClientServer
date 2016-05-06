@@ -48,7 +48,7 @@ void parse(int argcount, char* argval[], char* urls[], char* ports[], char* path
     if (argcount == 1) 
     {
         // argval[0] is the program name
-        cout << "Usage: " << argval[0] << " <URL> <URL> ..." << endl;
+        cerr << "Usage: " << argval[0] << " <URL> <URL> ..." << endl;
         exit(0);
     }
 
@@ -179,6 +179,8 @@ void returnDesc(char* &portN, char* &hostN, int *socketDes)
 }
 
 // Receive the entire header, so we know how to receive the body
+// Note that some body content will probably be received along with the header
+// Thus, response.payload is now just the beginnong of the body, not the entire body
 int receiveResponseHead(int sockfd, HttpResponse* response, int end) 
 {
     // send/receive data to/from connection
@@ -233,6 +235,7 @@ int receiveResponseHead(int sockfd, HttpResponse* response, int end)
 // Receiving the body depends on the HTTP response head.
 // If ContentLength is empty, then wait until connection close
 // Otherwise read until body length is equal to content length
+// Also note that response.payload contains the beginnong of the content body
 int receiveResponseBody(int sockfd, HttpResponse* response, int saveFd, int end) 
 {
     // send/receive data to/from connection
@@ -276,7 +279,7 @@ int receiveResponseBody(int sockfd, HttpResponse* response, int saveFd, int end)
             }
             if (bytesRead == 0) {
                 cerr << "Connection closed before content length reached" << endl;
-                cout << totalBytesRead << "/" << response->getContentLength() << " bytes received" << endl;
+                cerr << totalBytesRead << "/" << response->getContentLength() << " bytes received" << endl;
                 return 1;
             }
         } else {
@@ -363,7 +366,7 @@ int main (int argc, char *argv[])
 
         receiveResponseBody(sockfd, &p, save, endAll);
                                   
-        cout << "finished writing!" << endl;
+        cerr << "Finished Writing File!" << endl;
 
         /*
         // Debugging only: Show parsed response

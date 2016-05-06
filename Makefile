@@ -1,14 +1,14 @@
-# Makefile to build monte_pi_sprng program
+# Makefile
 GPP=g++
 CFLAGS= -g -Wall -Werror
 MTOPTIONS =-pthread -std=c++11 
 
-# --- targets
+# Targets
 all: client server
 client: client.o HttpRequest.o HttpResponse.o Helper.o
-	$(GPP) client.o HttpRequest.o HttpResponse.o Helper.o -o client.out
+	$(GPP) client.o HttpRequest.o HttpResponse.o Helper.o -o web-client
 server: server.o HttpRequest.o HttpResponse.o Helper.o
-	$(GPP) server.o HttpRequest.o HttpResponse.o Helper.o -o server.out $(MTOPTIONS)
+	$(GPP) server.o HttpRequest.o HttpResponse.o Helper.o -o web-server $(MTOPTIONS)
 client.o:
 	$(GPP) $(CFLAGS) -c client.cpp -o client.o   
 server.o:
@@ -18,9 +18,6 @@ HttpRequest.o:
 HttpRespose.o:
 	$(GPP) $(CFLAGS) -c HttpResponse.cpp -o HttpResponse.o
 Helper.o:
-	$(GPP) $(CFLAGS) -c Helper.cpp -o Helper.o
-parsertest: HttpRequest.o HttpResponse.o
-	$(GPP) $(CFLAGS) -c parserTest.cpp -o parsertest.o
-	$(GPP) parsertest.o HttpRequest.o HttpResponse.o -o ptest.out	
+	$(GPP) $(CFLAGS) -c Helper.cpp -o Helper.o	
 clean:
-	rm -f *.o *.out
+	rm -f *.o *.out web-server web-client
