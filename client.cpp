@@ -233,11 +233,11 @@ int receiveResponseHead(int sockfd, HttpResponse* response, int end)
 // Receiving the body depends on the HTTP response head.
 // If ContentLength is empty, then wait until connection close
 // Otherwise read until body length is equal to content length
-int receiveResponseBody(int sockfd, HttpResponse* response, int end) 
+int receiveResponseBody(int sockfd, HttpResponse* response, int saveFd, int end) 
 {
     // send/receive data to/from connection
     char buf[BUFFER_LEN] = {0};
-    string body(response->getPayload());
+    unsigned int totalBytesRead = strlen(response->getPayload());
     int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
     int currSleepLength = 0;
 
@@ -250,7 +250,8 @@ int receiveResponseBody(int sockfd, HttpResponse* response, int end)
 
         if (bytesRead > 0) {
             currSleepLength = 0; // whenever anything is read, reset timeout
-            body += buf;
+            write(saveFd, buf, bytesRead);
+            totalBytesRead += bytesRead;
 
         } else if (bytesRead < 0) {
             if (currSleepLength > MAX_SLEEP_TIME) {
@@ -265,16 +266,12 @@ int receiveResponseBody(int sockfd, HttpResponse* response, int end)
 
         if (response->getContentLength() > 0) {
             // If ContentLength specified, read until body length is equal to content length
-            if (body.length() >= response->getContentLength()) {
-                cout << "body: " << endl;
-                cout << body << endl;
+            if (totalBytesRead >= response->getContentLength()) {
                 return 0;
             }
         } else {
             // If ContentLength is empty, then wait until connection close
             if (bytesRead == 0) {
-                cout << "body: " << endl;
-                cout << body << endl;
                 return 0;
             }
         }
@@ -336,7 +333,6 @@ int main (int argc, char *argv[])
         HttpResponse p;     // Class to parse the response buffer
         // Get the response   
         receiveResponseHead(sockfd, &p, endAll);
-        receiveResponseBody(sockfd, &p, endAll);
 
         if (p.getStatusCode() != 200) {
             // Request Error?
@@ -344,7 +340,7 @@ int main (int argc, char *argv[])
             cleanConnection(&sockfd);
             exit(0);
         }
-                                  
+
         // What will we call the file?
         char* saveFileName = new char [strlen(g.getPath())];
         strcpy(saveFileName, g.getPath());
@@ -353,8 +349,11 @@ int main (int argc, char *argv[])
 
         // Create the file
         int save = open(saveFileName, O_CREAT|O_RDWR|O_TRUNC, 0666);
-        write(save, p.getPayload(), p.getContentLength());
-        cout << "finished writing: " << g.getPath() << ". Length: " << p.getContentLength() << endl;
+        write(save, p.getPayload(), strlen(p.getPayload())); // write initial payload
+
+        receiveResponseBody(sockfd, &p, save, endAll);
+                                  
+        cout << "finished writing!" << endl;
 
         /*
         // Debugging only: Show parsed response
