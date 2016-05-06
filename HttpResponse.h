@@ -18,6 +18,7 @@ protected:
 	char* payload;
 	char* response;
 	char* protocolVersion;
+	bool headerComplete; // true if header is complete, needed for the receiveMessage function
 	
 	// Protected  helper functions
 	// Generate status message
@@ -46,6 +47,7 @@ public:
 	char* getStatus();
 	char* getPayload();
 	char* getProtocolVersion();
+	bool isHeaderComplete();
 };
 
 #endif

@@ -29,6 +29,9 @@ using namespace std;
 
 typedef struct addrinfo AddressInfo;
 
+const int SLEEP_LENGTH = 10000; // 10ms
+const int MAX_SLEEP_TIME = 500000; //500 ms
+
 // Same story with these; I dunno if I can move this into returnDesc()
 AddressInfo hints;          // Address information of server to connect to
 AddressInfo *servinfo, *p;  // Servinfo - linked list of possible servers
@@ -175,6 +178,112 @@ void returnDesc(char* &portN, char* &hostN, int *socketDes)
     } 
 }
 
+// Receive the entire header, so we know how to receive the body
+int receiveResponseHead(int sockfd, HttpResponse* response, int end) 
+{
+    // send/receive data to/from connection
+    char buf[BUFFER_LEN] = {0};
+    string raw = "";
+    int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
+    int currSleepLength = 0;
+    char* result;
+
+    while (!end) 
+    {
+        memset(buf, '\0', sizeof(buf));     // Zero out the buffer
+
+        // Receive over the file descriptor
+        if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) 
+        {
+            cerr << "Failed to receive data from the server." << endl;
+            exit(1);
+        }
+
+        if (bytesRead > 0) {
+            //every time we get more data, parse again to see if we have the entire header
+            currSleepLength = 0; // whenever anything is read, reset timeout
+
+            raw += buf;
+
+            result = new char[raw.length()+1];
+            result[raw.length()] = '\0'; // add null terminator
+            strncpy(result, raw.c_str(), raw.length());
+
+            response->parseReq(result);
+
+            if (response->isHeaderComplete()) {
+                return 0;
+            }
+        } else {
+            if (currSleepLength > MAX_SLEEP_TIME) {
+                cerr << "Failed to receive full response before timeout." << endl;
+                exit(1);
+            }
+
+            usleep(SLEEP_LENGTH);
+            currSleepLength += SLEEP_LENGTH;
+            continue;
+        }
+    }
+
+    // Should never reach this point; but just in case...
+    return 0;
+}
+
+// Receiving the body depends on the HTTP response head.
+// If ContentLength is empty, then wait until connection close
+// Otherwise read until body length is equal to content length
+int receiveResponseBody(int sockfd, HttpResponse* response, int end) 
+{
+    // send/receive data to/from connection
+    char buf[BUFFER_LEN] = {0};
+    string body(response->getPayload());
+    int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
+    int currSleepLength = 0;
+
+    while (!end) 
+    {
+        memset(buf, '\0', sizeof(buf));     // Zero out the buffer
+
+        // Receive over the file descriptor
+        bytesRead = recv(sockfd, buf, BUFFER_LEN-1, MSG_DONTWAIT);
+
+        if (bytesRead > 0) {
+            currSleepLength = 0; // whenever anything is read, reset timeout
+            body += buf;
+
+        } else if (bytesRead < 0) {
+            if (currSleepLength > MAX_SLEEP_TIME) {
+                cerr << "Failed to receive full response before timeout." << endl;
+                exit(1);
+            }
+
+            usleep(SLEEP_LENGTH);
+            currSleepLength += SLEEP_LENGTH;
+            continue;
+        }
+
+        if (response->getContentLength() > 0) {
+            // If ContentLength specified, read until body length is equal to content length
+            if (body.length() >= response->getContentLength()) {
+                cout << "body: " << endl;
+                cout << body << endl;
+                return 0;
+            }
+        } else {
+            // If ContentLength is empty, then wait until connection close
+            if (bytesRead == 0) {
+                cout << "body: " << endl;
+                cout << body << endl;
+                return 0;
+            }
+        }
+    }
+
+    // Should never reach this point; but just in case...
+    return 0;
+}
+
 // Free the server address information; close the descriptor
 void cleanConnection(int *socketDes) 
 {
@@ -224,13 +333,10 @@ int main (int argc, char *argv[])
         sendMessage(sockfd, req.c_str(), req.length());
 
         // Parse the appropriate response message
-        char* resp;         // Buffer to store the response
-        int resplen = 0;    // The length of the response
         HttpResponse p;     // Class to parse the response buffer
         // Get the response   
-        receiveMessage(sockfd, resp, &resplen, endAll);
-        // Parse the response                          
-        p.parseReq(resp); 
+        receiveResponseHead(sockfd, &p, endAll);
+        receiveResponseBody(sockfd, &p, endAll);
 
         if (p.getStatusCode() != 200) {
             // Request Error?
@@ -238,8 +344,6 @@ int main (int argc, char *argv[])
             cleanConnection(&sockfd);
             exit(0);
         }
-
-        cout << endl << endl << resp << endl;
                                   
         // What will we call the file?
         char* saveFileName = new char [strlen(g.getPath())];

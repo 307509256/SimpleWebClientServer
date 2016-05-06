@@ -1,5 +1,8 @@
 #include "Helper.h"
 
+const int SLEEP_LENGTH = 10;
+const int MAX_SLEEP_TIME = 1000;
+
 // Send a message to the server/client
 int sendMessage(int clientSockfd, const char* msg, int len) 
 {
@@ -12,66 +15,51 @@ int sendMessage(int clientSockfd, const char* msg, int len)
     return 0;
 }
 
-// Receives a message from the server/client
-int receiveMessage(int sockfd, char* &result, int* messageLen, int end) 
+// General purpose message receiver
+// Assumes message is finished only if connection closes or read times out
+// Note that if sender finishes sending without closing the connection (eg. listening for response),
+// a blocking recv() call will just hang
+// This is why we use the MSG_DONTWAIT flag to set recv to non-blocking
+int receiveMessage(int sockfd, char* &result, int end) 
 {
     // send/receive data to/from connection
     char buf[BUFFER_LEN] = {0};
     std::string raw = "";
-    bool started = false;               // Just a flag, to make sure that data was sent
-    int sleepcount = 0;
     int bytesRead = 0;                  // Used to count the amount of bytes sent over the descriptor
+    int currSleepLength = 0;
 
     while (!end) 
     {
         memset(buf, '\0', sizeof(buf));     // Zero out the buffer
 
         // Receive over the file descriptor
-        if ((bytesRead = recv(sockfd, buf, BUFFER_LEN-1, 0)) == -1) 
-        {
-            std::cerr << "Failed to receive data from the server." << std::endl;
-            exit(1);
-        }
+        bytesRead = recv(sockfd, buf, BUFFER_LEN-1, MSG_DONTWAIT);
 
-        // Check if data was transmitted
-        if (!started && bytesRead > 0) 
-            started = true;
+        if (bytesRead > 0) {
 
-        // Transfer the rest of the file
-        if (started) 
-        {
+            currSleepLength = 0; // whenever anything is read, reset timeout
             raw += buf;
 
-            // Finished reading; copy the buffer over
-            if (bytesRead < BUFFER_LEN-1) 
-            {
-                if (sleepcount < 5) 
-                {
-                    usleep(1000);
-                    sleepcount++;
-                    continue;
-                }
-                /*
-                // Debugging only: comment out
-                cout << raw << endl;
-                */
+        } else if (bytesRead == 0) { // connection close
+            break;
 
-                raw += '\0'; // add null terminator
-                
-                result = new char[raw.length()];
-                *messageLen = raw.length();
-                std::strncpy(result, raw.c_str(), raw.length());
-                return 0;
-            } 
-            else 
-            {
-                sleepcount = 0;
+        } else { // bytesRead < 0 means no data read, but connection still open
+            if (currSleepLength > MAX_SLEEP_TIME) {
+                break;
             }
+
+            usleep(SLEEP_LENGTH);
+            currSleepLength += SLEEP_LENGTH;
+            continue;
         }
     }
-    
-    // Should never reach this point; but just in case...
-    return 0;
+
+    // either connection close or timeout
+    result = new char[raw.length()+1];
+    result[raw.length()] = '\0'; // add null terminator
+    std::strncpy(result, raw.c_str(), raw.length());
+
+    return bytesRead; // return whatever value caused the whileloop to break (0 for connection close, -1 for timeout)
 }
 
 // Checks if there is an error in the passed in string

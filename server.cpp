@@ -75,13 +75,12 @@ void parse( int argcount, char *argval[], char* &host_name, char* &port_n, char*
 void clientHandler (int fileDsc) 
 {
     char* req;          // Request buffer
-    int reqlen = 0;     // Length of the buffer
 
     // Obtain the Request, and parse it using the user defined class
-    receiveMessage(fileDsc, req, &reqlen, endAll);
+    receiveMessage(fileDsc, req, endAll);
     HttpGetRequest o;
     o.parseReq(req);
-    
+
     /*
     // Debugging only: Print out the information of the obtained Request
     cout << "Length: " << reqlen << endl;
@@ -95,11 +94,15 @@ void clientHandler (int fileDsc)
     // ToDo
 
     // Send the response
-    string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nHello");
+    string resp ("HTTP/1.1 200 OK\r\nDate: Sun, 03 Apr 2011 19:48:33 GMT\r\nServer: Apache/1.2.5\r\nLast-Modified: Tue, 22 Jun 2010 19:20:37 GMT\r\nETag: \"2b3e-258f-4c210d05\"\r\nContent-Length: 5\r\nAccept-Ranges: bytes\r\nContent-Type: text/html\r\n\r\nH");
+    string resp2 ("ello");
     sendMessage(fileDsc, resp.c_str(), resp.length());
+    usleep(1000);
+    sendMessage(fileDsc, resp2.c_str(), resp2.length());
+    cout << "done" << endl;
 
     // Close the file descriptor for this instance
-    close(fileDsc); 
+    close(fileDsc);
 }
 
 // Initialize socket, and return the file descriptor 

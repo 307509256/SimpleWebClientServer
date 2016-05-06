@@ -8,6 +8,7 @@ HttpResponse::HttpResponse()
 	this->response = NULL;
 	this->status = NULL;
 	this->protocolVersion = NULL;
+	this->headerComplete = false;
 }
 
 // Default Constructor
@@ -18,6 +19,7 @@ HttpResponse::HttpResponse(double payloadLen, int StatCode, char* htmlPayload)
 	this->genStatus(this->statusCode);
 	this->payload = new char [std::strlen(htmlPayload)];
 	std::strcpy(this->payload, htmlPayload);
+	this->headerComplete = true;
 }
 
 // Destructor
@@ -52,6 +54,7 @@ void HttpResponse::clear()
 	this->payload = NULL;
 	this->response = NULL;
 	this->protocolVersion = NULL;
+	this->headerComplete = false;
 }
 
 // Get the response code string
@@ -168,14 +171,13 @@ void HttpResponse::parseReq(char *buffer)
 			// Check for double '\r\n\r\n'
 			if (check == "\r\n\r\n")
 			{
-				// Parse it if it has content length; or set the content length value, if 0
-				if (this->contentLength <= 0) 
-					this->contentLength = strlen(buffer+i+4);
+				this->headerComplete = true;
+				int payloadLen = this->contentLength > 0 ? this->contentLength : strlen(buffer+i+4);
 
 				// The rest is data
-				this->payload = new char [this->contentLength+1];
-				strncpy(this->payload, buffer+i+4, this->contentLength);
-				this->payload[this->contentLength] = 0;
+				this->payload = new char [payloadLen+1];
+				strncpy(this->payload, buffer+i+4, payloadLen);
+				this->payload[payloadLen] = 0;
 			}
 		}
 	}
@@ -206,3 +208,7 @@ char* HttpResponse::getProtocolVersion()
 	return this->protocolVersion;
 }
 
+bool HttpResponse::isHeaderComplete()
+{
+	return this->headerComplete;
+}
